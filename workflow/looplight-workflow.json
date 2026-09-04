@@ -1,0 +1,1209 @@
+{
+  "name": "LoopLight",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "What's on your mind?",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Say it and we'll add it to the loop— skip it and we'll pick one to do!",
+              "fieldType": "textarea",
+              "fieldName": "brain_dump"
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "buttonLabel": "Let's Go !"
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        -336
+      ],
+      "id": "97e8a2a6-cd49-4543-b10c-5de5f4ce68ba",
+      "name": "On form submission",
+      "webhookId": "4a521d1b-8c4b-45cd-a937-77262ee97f5b"
+    },
+    {
+      "parameters": {
+        "text": "={{ \"MIND DUMP:\\n\" + ($json.brain_dump || \"\")  }}",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"capacity_signal\": {\n      \"type\": \"string\",\n      \"enum\": [\"low\", \"normal\", \"high\", \"unknown\"]\n    },\n    \"capacity_evidence\": {\n      \"type\": [\"string\", \"null\"]\n    },\n    \"available_minutes\": {\n      \"type\": [\"number\", \"null\"]\n    },\n    \"items\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"source_text\": {\n            \"type\": \"string\"\n          },\n          \"description\": {\n            \"type\": \"string\"\n          },\n          \"item_type\": {\n            \"type\": \"string\",\n            \"enum\": [\"task\", \"event\", \"idea\", \"reference\", \"concern\"]\n          },\n          \"status\": {\n            \"type\": \"string\",\n            \"enum\": [\"open\", \"completed\", \"scheduled\", \"informational\"]\n          },\n          \"deadline_text\": {\n            \"type\": [\"string\", \"null\"]\n          },\n          \"effort_band\": {\n            \"type\": \"string\",\n            \"enum\": [\"quick\", \"low\", \"medium\", \"high\", \"unknown\"]\n          },\n          \"needs_clarification\": {\n            \"type\": \"boolean\"\n          }\n        },\n        \"required\": [\n          \"source_text\",\n          \"description\",\n          \"item_type\",\n          \"status\",\n          \"deadline_text\",\n          \"effort_band\",\n          \"needs_clarification\"\n        ],\n        \"additionalProperties\": false\n      }\n    }\n  },\n  \"required\": [\n    \"capacity_signal\",\n    \"capacity_evidence\",\n    \"available_minutes\",\n    \"items\"\n  ],\n  \"additionalProperties\": false\n}",
+        "options": {
+          "systemPromptTemplate": "You extract structured information for LoopLight.\n\nSeparate temporary capacity information from persistent items.\n\nCapacity rules:\n- Infer capacity_signal only from what the user says about their current energy or ability.\n- Use unknown when capacity is not provided.\n- Extract available_minutes only when the user gives or clearly implies an amount of time.\n- Never carry capacity from an earlier submission.\n\nItem rules:\n- Preserve each item's original wording in source_text.\n- Create one item for each distinct task, event, idea, reference, or concern.\n- Do not invent a deadline.\n- Mark something completed only when the user explicitly says it is already done.\n- Use scheduled for an event with a stated date or time.\n- Use informational for ideas or references that do not require action.\n\nEffort rules:\n- quick: under 30 minutes\n- low: 30 to 60 minutes\n- medium: over 60 to 120 minutes\n- high: over 120 minutes\n- unknown: not enough information\n- Effort is an estimate, not a confirmed fact.\n\nFor effort_band, classify based on the nature of the task itself, inferring when not explicit:\n- quick: a single action taking a few minutes , under 30 (a reply, a quick call, checking something)\n- low: a short focused task under 60 min (a short email, a small errand)\n- medium: a task needing 60-120 min of real focus (drafting something, a longer errand, prep work)\n- high: a task needing 120+ min or spanning multiple sessions (a project, something complex/unclear in scope)\n\nOnly use \"unknown\" if there's genuinely no way to infer effort from the text — this should be rare, not the default. Make your best reasonable guess based on the task's nature before falling back to unknown.\n\nClarification rules:\n- Set needs_clarification to true only when ambiguity would prevent the item from being understood or acted upon.\n- Do not request clarification merely because effort or deadline is unknown.\n-If the brain dump is empty, just says \"nothing,\" or is clearly not describing any real task/thought (e.g. \"n/a\", \"just checking in\"), return an empty items array — don't invent a task from filler text."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        -448
+      ],
+      "id": "62e8dc4e-89fa-42b8-9d9d-49ea0a633a98",
+      "name": "Information Extractor",
+      "retryOnFail": false,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aSnp9GY6WLw74ZSas4LapWatnoQKyRfo7CCOh_K8XSQ",
+          "mode": "list",
+          "cachedResultName": "LoopLight_Memory",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aSnp9GY6WLw74ZSas4LapWatnoQKyRfo7CCOh_K8XSQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1159382108,
+          "mode": "list",
+          "cachedResultName": "Sessions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aSnp9GY6WLw74ZSas4LapWatnoQKyRfo7CCOh_K8XSQ/edit#gid=1159382108"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id | submitted_at | timezone | capacity_signal | capacity_evidence | available_minutes | brain_dump | capacity_update": "={{ $('On form submission').item.json.submittedAt }}",
+            "submitted_at": "={{ $('On form submission').item.json.submittedAt }}",
+            "timezone": "America/Chicago",
+            "capacity_signal": "={{ $json.output.capacity_signal }}",
+            "capacity_evidence": "={{ $json.output.capacity_evidence ?? \"\" }}",
+            "available_minutes": "={{ $json.output.available_minutes ?? \"\" }}",
+            "brain_dump": "={{ $('On form submission').item.json.brain_dump ?? \"\" }}",
+            "capacity_update": "={{ $('On form submission').item.json.capacity_update ?? \"\" }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "session_id | submitted_at | timezone | capacity_signal | capacity_evidence | available_minutes | brain_dump | capacity_update",
+              "displayName": "session_id | submitted_at | timezone | capacity_signal | capacity_evidence | available_minutes | brain_dump | capacity_update",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "submission_id",
+              "displayName": "submission_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "submitted_at",
+              "displayName": "submitted_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "timezone",
+              "displayName": "timezone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "capacity_signal",
+              "displayName": "capacity_signal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "capacity_evidence",
+              "displayName": "capacity_evidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "available_minutes",
+              "displayName": "available_minutes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "brain_dump",
+              "displayName": "brain_dump",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "capacity_update",
+              "displayName": "capacity_update",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1248,
+        -336
+      ],
+      "id": "7fcec04e-ad3d-4e5b-ac26-717c064c9b2a",
+      "name": "Write session",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Zu96Fcf35utyfb6Y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7ccd0a8c-d4da-4198-acde-ebe50c87ab15",
+              "leftValue": "={{ $json.has_new_item }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1696,
+        -336
+      ],
+      "id": "2f9c3104-1cff-4c66-8ae1-0668f48b6a79",
+      "name": "New Items?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const extraction = $(\"Information Extractor\").first().json.output;\nconst form = $(\"On form submission\").first().json;\nconst submittedAt = form.submittedAt;\n\nif (!submittedAt) {\n  return [{\n    json: {\n      has_new_item: false,\n      session_id: \"unknown\",\n      error: \"Could not read this submission. Nothing was saved — please try submitting again.\"\n    }\n  }];\n}\n\nconst items = Array.isArray(extraction?.items) ? extraction.items : [];\n\nif (items.length === 0) {\n  return [{ json: { has_new_item: false, session_id: submittedAt } }];\n}\n\nreturn items.map((item, index) => ({\n  json: {\n    has_new_item: true,\n    item_id: `${submittedAt}-${index + 1}`,\n    session_id: submittedAt,\n    created_at: submittedAt,\n    source_text: item.source_text ?? \"\",\n    description: item.description ?? \"\",\n    item_type: item.item_type ?? \"concern\",\n    status: item.status ?? \"open\",\n    deadline_text: item.deadline_text ?? \"\",\n    effort_band: item.effort_band ?? \"unknown\",\n    needs_clarification: Boolean(item.needs_clarification)\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        -336
+      ],
+      "id": "960f81b4-220c-42a1-91ba-f0dda445f4f2",
+      "name": "Prepare Items",
+      "notes": "const extraction = $items(\"Information Extractor\")[0]?.json?.output ?? {};\nconst form = $items(\"On form submission\")[0]?.json ?? {};\n\nconst submittedAt = form.submittedAt;\n\nif (!submittedAt) {\n  throw new Error(\"Missing submittedAt from the form submission.\");\n}\n\nconst items = Array.isArray(extraction.items) ? extraction.items : [];\n\n// Keep the workflow running for a capacity-only submission.\nif (items.length === 0) {\n  return [\n    {\n      json: {\n        has_new_item: false,\n        session_id: submittedAt\n      }\n    }\n  ];\n}\n\n// Create one n8n record for every extracted item.\nreturn items.map((item, index) => ({\n  json: {\n    has_new_item: true,\n    item_id: `${submittedAt}-${index + 1}`,\n    session_id: submittedAt,\n    created_at: submittedAt,\n    source_text: item.source_text ?? \"\",\n    description: item.description ?? \"\",\n    item_type: item.item_type ?? \"concern\",\n    status: item.status ?? \"open\",\n    deadline_text: item.deadline_text ?? \"\",\n    effort_band: item.effort_band ?? \"unknown\",\n    needs_clarification: Boolean(item.needs_clarification),\n    todoist_task_id: \"\"\n  }\n}));"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1aSnp9GY6WLw74ZSas4LapWatnoQKyRfo7CCOh_K8XSQ",
+          "mode": "list",
+          "cachedResultName": "LoopLight_Memory",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aSnp9GY6WLw74ZSas4LapWatnoQKyRfo7CCOh_K8XSQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Items",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aSnp9GY6WLw74ZSas4LapWatnoQKyRfo7CCOh_K8XSQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "item_id",
+              "displayName": "item_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "source_text",
+              "displayName": "source_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "item_type",
+              "displayName": "item_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "deadline_text",
+              "displayName": "deadline_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "effort_band",
+              "displayName": "effort_band",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "needs_clarification",
+              "displayName": "needs_clarification",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "todoist_task_id",
+              "displayName": "todoist_task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "has_new_item",
+              "displayName": "has_new_item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1920,
+        -416
+      ],
+      "id": "3dbda780-3433-4f07-a332-912763f1185c",
+      "name": "Save Items to Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Zu96Fcf35utyfb6Y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        976,
+        -224
+      ],
+      "id": "001ad996-6212-4704-a2b0-f49642cdfe4e",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "F6PpLDUO9T5m9xGL",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ \n  \"CURRENT SESSION:\\n\" +\n  JSON.stringify($(\"Information Extractor\").first().json.output, null, 2)\n}}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You have exactly one tool available: Read Open Items. Never attempt to call any tool named \"JSON,\" \"json,\" \"format,\" or anything else — those do not exist. Once you have the information you need from Read Open Items, respond directly with your final answer as plain text (the JSON object described below) — do not call a tool to produce it.\n\nYou are a helpful assistantYou are LoopLight, an attention-management agent.\n\nYour job is to reduce the user's mental load by helping them decide what deserves attention now.\n\nYou must call the Read Open Items tool before making a recommendation. Treat those rows as the user's persistent open-task memory.\n\nUse the capacity information in CURRENT SESSION as the only current capacity signal. Never infer current capacity from older stored information.\n\nDecision policy:\n1. First identify tasks with explicit urgency or deadlines.\n2. Never hide an urgent or deadline-driven task because the user has low energy.\n3. If multiple urgent tasks exist, present up to three choices and let the user choose. Do not pretend to know which consequence matters most.\n4. If no urgent task exists, recommend one task that fits the user's available time and energy.\n5. Recommend rest as the sole recommendation only when:\n   - no urgent or deadline-driven task requires attention, and\n   - the user reports low energy, or no task reasonably fits.\n6. Do not create, update, complete, or delete anything.\n7. Do not call tools other than Read Open Items.\n8. Do not invent deadlines, urgency, effort, or consequences.\n\nAfter using Read Open Items, select up to 3 candidate items using the decision policy above.\nAlways return exactly 3 candidates whenever at least 3 open items exist, even if some are weaker fits than others — rank them by quality using the \"why\" field to be honest about a weaker fit (e.g., \"lower priority, but nothing more urgent is open\"). Only return fewer than 3 if fewer than 3 open items exist at all.\nReturn ONLY valid JSON in this exact shape, no other text:\n{\n  \"candidates\": [\n    {\"item_id\": \"...\", \"description\": \"...\", \"why\": \"one short reason\"},\n    ...\n  ],\n  \"no_fit_message\": \"shown only if candidates is empty\"\n}\n\nIf no items are eligible, return an empty candidates array and fill no_fit_message with a plain sentence explaining why (e.g. low capacity, nothing urgent)."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        960,
+        96
+      ],
+      "id": "c92566fe-c7b1-48ac-96df-71b6b335a53b",
+      "name": "Decision Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        912,
+        320
+      ],
+      "id": "79471cbe-31c7-4d00-abd2-396c9e6dcfc5",
+      "name": "Groq Chat Model2",
+      "credentials": {
+        "groqApi": {
+          "id": "F6PpLDUO9T5m9xGL",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aSnp9GY6WLw74ZSas4LapWatnoQKyRfo7CCOh_K8XSQ",
+          "mode": "list",
+          "cachedResultName": "LoopLight_Memory",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aSnp9GY6WLw74ZSas4LapWatnoQKyRfo7CCOh_K8XSQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Items",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aSnp9GY6WLw74ZSas4LapWatnoQKyRfo7CCOh_K8XSQ/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "open"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1040,
+        320
+      ],
+      "id": "ab7a751e-86d0-402c-baf5-9f0aecb44d13",
+      "name": "Read Open Items2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Zu96Fcf35utyfb6Y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      ready_for_decision: true\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        96
+      ],
+      "id": "043d895b-e583-4368-8e73-cb7624e2f822",
+      "name": "Start decision"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $json.output || {};\nconst candidates = Array.isArray(output.candidates) ? output.candidates : [];\n\nreturn {\n  json: {\n    recommendation_status: candidates.length ? \"ready\" : \"no_fit\",\n    candidates: candidates,\n    no_fit_message: output.no_fit_message || \"Nothing fits right now.\"\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        96
+      ],
+      "id": "4e33e676-dfa6-48a8-929e-8b9d4ecf818e",
+      "name": "Validate reccomendation"
+    },
+    {
+      "parameters": {
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Pick One or None ",
+              "fieldType": "radio",
+              "fieldName": "approval_decision",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "=\t{{ $json.candidates[0] ? $json.candidates[0].description : '' }}"
+                  },
+                  {
+                    "option": "={{ $json.candidates[1] ? $json.candidates[1].description : '' }}"
+                  },
+                  {
+                    "option": "={{ $json.candidates[2] ? $json.candidates[2].description : '' }}"
+                  },
+                  {
+                    "option": "None of the above"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {
+          "formTitle": "Yay - Let's do this!",
+          "buttonLabel": "Thanks!"
+        }
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1584,
+        96
+      ],
+      "id": "8922716c-55b7-4e84-95ae-52b81e97023d",
+      "name": "Review Recommendation",
+      "webhookId": "ada37304-f5d1-47b4-acfd-98585c852b98"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.approval_decision;\nconst candidates = $('Validate reccomendation').item.json.candidates;\nconst match = candidates.find(c => c.description === raw);\nconst id = match ? match.item_id : null;\nreturn { json: { selected_item_id: id } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        96
+      ],
+      "id": "46b26d95-6f4a-4c3c-ab8d-b8d24696951b",
+      "name": "Parse Selection"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2d5adaa3-905c-4fc1-9826-aac41ecd453d",
+              "leftValue": "={{ $json.selected_item_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2032,
+        96
+      ],
+      "id": "a541cb61-db4e-412c-9759-bb10eb83081b",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1aSnp9GY6WLw74ZSas4LapWatnoQKyRfo7CCOh_K8XSQ",
+          "mode": "list",
+          "cachedResultName": "LoopLight_Memory",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aSnp9GY6WLw74ZSas4LapWatnoQKyRfo7CCOh_K8XSQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Items",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aSnp9GY6WLw74ZSas4LapWatnoQKyRfo7CCOh_K8XSQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "item_id": "={{ $json.selected_item_id }}",
+            "status": "In Progress"
+          },
+          "matchingColumns": [
+            "item_id"
+          ],
+          "schema": [
+            {
+              "id": "item_id",
+              "displayName": "item_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "source_text",
+              "displayName": "source_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "item_type",
+              "displayName": "item_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "deadline_text",
+              "displayName": "deadline_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "effort_band",
+              "displayName": "effort_band",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "needs_clarification",
+              "displayName": "needs_clarification",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "todoist_task_id",
+              "displayName": "todoist_task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "has_new_item",
+              "displayName": "has_new_item",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2256,
+        96
+      ],
+      "id": "aba1ca32-fa82-4122-8bf6-b95f5ad29382",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Zu96Fcf35utyfb6Y",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"candidates\": [\n    { \"item_id\": \"string\", \"description\": \"string\", \"why\": \"string\" }\n  ],\n  \"no_fit_message\": \"string\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1168,
+        320
+      ],
+      "id": "e901359c-79ff-4e5c-a405-66289b1e0c63",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4bec81bf-cf71-46bc-9de7-b05dd56751d6",
+              "leftValue": "={{ $('On form submission').item.json.capacity_update }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        -672
+      ],
+      "id": "0862ef5c-e188-4395-9d40-755da1382232",
+      "name": "Capacity Gate"
+    },
+    {
+      "parameters": {
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Pick One ",
+              "fieldType": "radio",
+              "fieldName": "capacity_followup",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes, let's do this. I have time"
+                  },
+                  {
+                    "option": "I'll try,  I have some time"
+                  },
+                  {
+                    "option": "Ok, but a quickie "
+                  },
+                  {
+                    "option": "Nope, not right now"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {
+          "formTitle": "Got it - Want to tackle one from the loop?",
+          "buttonLabel": "Lets Go!"
+        }
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        2144,
+        -336
+      ],
+      "id": "2c77b3bc-0597-4dfc-af07-a116dad717a8",
+      "name": "Got it!",
+      "webhookId": "131cc3f3-8a5a-44ee-a7fa-a111f4336fbe"
+    },
+    {
+      "parameters": {
+        "formTitle": "LoopLight Check-In",
+        "formDescription": "Unload what's on your mind, update your current capacity, or do both.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "What's on your mind?",
+              "fieldType": "textarea",
+              "fieldName": "brain_dump",
+              "placeholder": "Tasks, reminders, worries, ideas, links—anything occupying your mind."
+            },
+            {
+              "fieldLabel": "How are you feeling, and how much time do you have?",
+              "fieldType": "textarea",
+              "fieldName": "capacity_update",
+              "placeholder": "For example: I'm tired and have about 20 minutes."
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        448,
+        -672
+      ],
+      "id": "4ee0e6d2-c4d1-4a71-8d15-ab74f7630c96",
+      "name": "On form submission1",
+      "webhookId": "4d8a9fc5-4319-4f2b-a505-e442b373fefd"
+    },
+    {
+      "parameters": {
+        "jsCode": "const choice = $json.capacity_followup; const skipped = choice === \"Nope, not right now\"; return { json: { capacity_signal: skipped ? \"\" : choice, has_capacity: !skipped } }; "
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        -336
+      ],
+      "id": "54af6179-ae3f-4528-9885-ca7a963785f6",
+      "name": "Normalize follow up Capacity"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2295572f-bce0-4051-aad8-7f98b1bc52b5",
+              "leftValue": "={{ $json.has_capacity }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2592,
+        -336
+      ],
+      "id": "7f66937f-b312-4972-bdf3-a8832c9910a2",
+      "name": "Capacity Check"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "Write session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write session": {
+      "main": [
+        [
+          {
+            "node": "Prepare Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Items": {
+      "main": [
+        [
+          {
+            "node": "New Items?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New Items?": {
+      "main": [
+        [
+          {
+            "node": "Save Items to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Got it!",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Items to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Got it!",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Decision Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Open Items2": {
+      "ai_tool": [
+        [
+          {
+            "node": "Decision Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start decision": {
+      "main": [
+        [
+          {
+            "node": "Decision Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision Agent": {
+      "main": [
+        [
+          {
+            "node": "Validate reccomendation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate reccomendation": {
+      "main": [
+        [
+          {
+            "node": "Review Recommendation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Recommendation": {
+      "main": [
+        [
+          {
+            "node": "Parse Selection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Selection": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Decision Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capacity Gate": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "Got it!": {
+      "main": [
+        [
+          {
+            "node": "Normalize follow up Capacity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize follow up Capacity": {
+      "main": [
+        [
+          {
+            "node": "Capacity Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capacity Check": {
+      "main": [
+        [
+          {
+            "node": "Start decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0819afb7-0e87-4f45-a697-c7e33a3f8a08",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e187ca6e1fae0e1012ca557ec0ea5ec3e217dc936459d7b605e57b7c248dad3a"
+  },
+  "nodeGroups": [],
+  "id": "xubO0DocnlEAC6Xm",
+  "tags": []
+}
