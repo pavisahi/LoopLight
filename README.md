@@ -2,6 +2,7 @@
 
 A personal attention-management agent, built for Week 3 of The Gen AI Academy's 
 Mastering Agentic AI Certification (Track: No-code / n8n).
+![LoopLight workflow illustration](docs/looplight-cover.png)
 
 ## What it does
 
